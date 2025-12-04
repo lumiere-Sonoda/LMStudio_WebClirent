@@ -49,7 +49,6 @@ let isSending = false;
 
 // DOM Elements
 let newChatBtnEl: HTMLButtonElement;
-let searchChatBtnEl: HTMLButtonElement;
 let chatListEl: HTMLElement;
 let currentChatTitleEl: HTMLElement| null;
 let modelLabelEl: HTMLElement;
@@ -68,6 +67,13 @@ let settingsStatusEl: HTMLElement;
 let chatMessagesEl: HTMLElement;
 let userInputEl: HTMLTextAreaElement;
 let sendBtnEl: HTMLButtonElement;
+let searchChatBtnEl: HTMLButtonElement;
+let userCardEl: HTMLElement;
+let headerRightEl: HTMLElement;
+let headerMenuDropdownEl: HTMLDivElement | null = null;
+let modelDropdownEl: HTMLDivElement | null = null;
+let availableModelIds: string[] = [];
+
 
 function loadSettings(): void {
   try {
@@ -75,10 +81,15 @@ function loadSettings(): void {
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<Settings>;
       settings = { ...DEFAULT_SETTINGS, ...parsed };
+    } else {
+      settings = { ...DEFAULT_SETTINGS };
     }
   } catch {
     settings = { ...DEFAULT_SETTINGS };
   }
+  
+  settings.temperature = DEFAULT_SETTINGS.temperature;
+  settings.maxTokens = DEFAULT_SETTINGS.maxTokens;
 }
 
 function saveSettings(): void {
@@ -109,35 +120,18 @@ function saveSessions(): void {
   localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
 }
 
-function createNewSession(title: string): ChatSession {
-  const now = Date.now();
-  const session: ChatSession = {
-    id: `session_${now}_${Math.random().toString(36).slice(2, 8)}`,
-    title,
-    messages: [],
-    createdAt: now,
-    updatedAt: now,
-  };
-  sessions.unshift(session);
-  saveSessions();
-  return session;
-}
-
-
-
 function deleteSession(id: string): void {
   const idx = sessions.findIndex((s) => s.id === id);
   if (idx === -1) return;
 
   sessions.splice(idx, 1);
 
-  if (currentSessionId === id) {
-    if (sessions.length === 0) {
-      const s = createNewSession("新しいチャット");
-      currentSessionId = s.id;
-    } else {
-      currentSessionId = sessions[0].id;
-    }
+  if (sessions.length === 0) {
+    const s = createNewSession("新しいチャット");
+    currentSessionId = s.id;
+  } else if (currentSessionId === id) {
+    sessions.sort((a, b) => b.updatedAt - a.updatedAt);
+    currentSessionId = sessions[0].id;
   }
 
   saveSessions();
@@ -145,12 +139,6 @@ function deleteSession(id: string): void {
   renderHeader();
   renderMessages();
 }
-
-function getCurrentSession(): ChatSession | undefined {
-  return sessions.find((s) => s.id === currentSessionId);
-}
-
-
 
 function searchChat(keyword: string): void {
   const q = keyword.trim().toLowerCase();
@@ -192,6 +180,24 @@ function searchChat(keyword: string): void {
   renderMessages();
 }
 
+function createNewSession(title: string): ChatSession {
+  const now = Date.now();
+  const session: ChatSession = {
+    id: `session_${now}_${Math.random().toString(36).slice(2, 8)}`,
+    title,
+    messages: [],
+    createdAt: now,
+    updatedAt: now,
+  };
+  sessions.unshift(session);
+  saveSessions();
+  return session;
+}
+
+function getCurrentSession(): ChatSession | undefined {
+  return sessions.find((s) => s.id === currentSessionId);
+}
+
 /* === Rendering === */
 
 function renderSidebar(): void {
@@ -217,15 +223,14 @@ function renderSidebar(): void {
       title.textContent = session.title || "無題のチャット";
 
       const menuBtn = document.createElement("button");
-      menuBtn.className = "chat-list-item-menu";
       menuBtn.type = "button";
+      menuBtn.className = "chat-list-item-menu";
       menuBtn.textContent = "⋯";
 
       let dropdown: HTMLDivElement | null = null;
 
       menuBtn.addEventListener("click", (e) => {
         e.stopPropagation();
-
         if (dropdown) {
           dropdown.remove();
           dropdown = null;
@@ -258,6 +263,7 @@ function renderSidebar(): void {
 
         dropdown.appendChild(deleteBtn);
         dropdown.appendChild(exportBtn);
+
         item.appendChild(dropdown);
       });
 
@@ -355,6 +361,117 @@ function renderHeader(): void {
   modelLabelEl.textContent = `${name}`;
 }
 
+async function ensureModelList(): Promise<void> {
+  if (availableModelIds.length > 0) return;
+
+  try {
+    const res = await fetch(buildApiUrl("/models"));
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = (await res.json()) as { data?: { id: string }[] };
+    availableModelIds =
+      data.data?.map((m) => m.id).filter((id) => typeof id === "string") ?? [];
+  } catch (e) {
+    console.error("モデル一覧の取得に失敗しました", e);
+    availableModelIds = [];
+  }
+}
+
+function closeModelDropdown(): void {
+  if (modelDropdownEl) {
+    modelDropdownEl.remove();
+    modelDropdownEl = null;
+  }
+}
+
+function toggleModelDropdown(): void {
+  if (modelDropdownEl) {
+    closeModelDropdown();
+    return;
+  }
+
+  void (async () => {
+    await ensureModelList();
+
+    if (availableModelIds.length === 0) {
+      window.alert("利用可能なモデル一覧を取得できませんでした。");
+      return;
+    }
+
+    const container = document.createElement("div");
+    container.className = "model-dropdown";
+
+    availableModelIds.forEach((id) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = id;
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        settings.modelId = id;
+        saveSettings();
+        renderHeader();
+        closeModelDropdown();
+      });
+      container.appendChild(btn);
+    });
+
+    const block = modelLabelEl.parentElement;
+    if (block) {
+      block.appendChild(container);
+      modelDropdownEl = container;
+    }
+  })();
+}
+
+function closeHeaderMenu(): void {
+  if (headerMenuDropdownEl) {
+    headerMenuDropdownEl.remove();
+    headerMenuDropdownEl = null;
+  }
+}
+
+function toggleHeaderMenu(): void {
+  if (headerMenuDropdownEl) {
+    closeHeaderMenu();
+    return;
+  }
+
+  const dropdown = document.createElement("div");
+  dropdown.className = "header-menu-dropdown";
+
+  const deleteBtn = document.createElement("button");
+  deleteBtn.type = "button";
+  deleteBtn.textContent = "このチャットを削除";
+  deleteBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const session = getCurrentSession();
+    if (!session) return;
+    if (
+      !window.confirm(
+        `このチャット「${session.title || "無題のチャット"}」を削除しますか？`,
+      )
+    ) {
+      return;
+    }
+    deleteSession(session.id);
+    closeHeaderMenu();
+  });
+
+  const exportBtn = document.createElement("button");
+  exportBtn.type = "button";
+  exportBtn.textContent = "エクスポート（未実装）";
+  exportBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    window.alert("エクスポート機能はまだ実装されていません。");
+    closeHeaderMenu();
+  });
+
+  dropdown.appendChild(deleteBtn);
+  dropdown.appendChild(exportBtn);
+
+  headerRightEl.appendChild(dropdown);
+  headerMenuDropdownEl = dropdown;
+}
+
 /* === Settings panel === */
 
 function applySettingsToInputs(): void {
@@ -409,27 +526,24 @@ async function testConnection(): Promise<void> {
   settingsStatusEl.textContent = "接続テスト中…";
   connectionTextEl.textContent = "接続テスト中…";
   connectionDotEl.classList.remove("connected");
+
   try {
-    const res = await fetch(buildApiUrl("/models"));
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    await ensureModelList();
 
-    // モデル一覧を datalist に反映
-    try {
-      const data = (await res.json()) as {
-        data?: { id: string }[];
-      };
+    if (availableModelIds.length === 0) {
+      throw new Error("no models");
+    }
 
-      const listEl = document.getElementById("modelList");
-      if (listEl instanceof HTMLDataListElement && Array.isArray(data.data)) {
-        listEl.innerHTML = "";
-        for (const m of data.data) {
-          const opt = document.createElement("option");
-          opt.value = m.id;
-          listEl.appendChild(opt);
-        }
-      }
-    } catch {
-      // JSON パースなどに失敗しても、接続確認だけは成功とみなす
+    const listEl = document.getElementById(
+      "modelList",
+    ) as HTMLDataListElement | null;
+    if (listEl) {
+      listEl.innerHTML = "";
+      availableModelIds.forEach((id) => {
+        const opt = document.createElement("option");
+        opt.value = id;
+        listEl.appendChild(opt);
+      });
     }
 
     settingsStatusEl.textContent = "LM Studio と通信できました。";
@@ -570,14 +684,61 @@ function setupEvents(): void {
     renderMessages();
   });
 
+  settingsToggleBtnEl.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleHeaderMenu();
+  });
+
   searchChatBtnEl.addEventListener("click", () => {
-    const keyword = window.prompt("チャット内容から検索するキーワードを入力してください");
+    const keyword = window.prompt(
+      "チャット内容から検索するキーワードを入力してください",
+    );
     if (!keyword) return;
     searchChat(keyword);
   });
 
-  settingsToggleBtnEl.addEventListener("click", () => {
-    settingsPanelEl.classList.toggle("hidden");
+  modelLabelEl.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleModelDropdown();
+  });
+
+  if (userCardEl) {
+    userCardEl.addEventListener("click", (e) => {
+      // 外側クリック判定に飛ばないようにする
+      e.stopPropagation();
+      settingsPanelEl.classList.toggle("hidden");
+    });
+  }
+
+  document.addEventListener("click", (e) => {
+  const target = e.target as Node | null;
+
+  if (headerMenuDropdownEl && headerRightEl && target) {
+    if (!headerRightEl.contains(target)) {
+      closeHeaderMenu();
+    }
+  }
+
+  if (modelDropdownEl && modelLabelEl && target) {
+    const block = modelLabelEl.parentElement;
+    if (block && !block.contains(target)) {
+      closeModelDropdown();
+    }
+  }
+
+    // ★ 設定ポップアップの外側をクリックしたら閉じる
+    if (
+      settingsPanelEl &&
+      !settingsPanelEl.classList.contains("hidden") &&
+      target
+    ) {
+      const clickInsidePanel = settingsPanelEl.contains(target);
+      const clickOnUserCard = userCardEl && userCardEl.contains(target);
+
+      if (!clickInsidePanel && !clickOnUserCard) {
+        settingsPanelEl.classList.add("hidden");
+      }
+    }
   });
 
   saveSettingsBtnEl.addEventListener("click", () => {
@@ -604,14 +765,22 @@ function setupEvents(): void {
       void handleSend();
     }
   });
+
+  document.addEventListener("keydown", (e: KeyboardEvent) => {
+  if (e.key === "Escape") {
+    if (!settingsPanelEl.classList.contains("hidden")) {
+      settingsPanelEl.classList.add("hidden");
+    }
+  }
+});
 }
 
+/* === Init === */
 /* === Init === */
 
 window.addEventListener("DOMContentLoaded", () => {
   // Get elements
   newChatBtnEl = document.getElementById("newChatBtn") as HTMLButtonElement;
-  searchChatBtnEl = document.getElementById("searchChatBtn") as HTMLButtonElement;
   chatListEl = document.getElementById("chatList") as HTMLElement;
   currentChatTitleEl = document.getElementById("currentChatTitle");
   modelLabelEl = document.getElementById("modelLabel") as HTMLElement;
@@ -649,6 +818,11 @@ window.addEventListener("DOMContentLoaded", () => {
   chatMessagesEl = document.getElementById("chatMessages") as HTMLElement;
   userInputEl = document.getElementById("userInput") as HTMLTextAreaElement;
   sendBtnEl = document.getElementById("sendBtn") as HTMLButtonElement;
+  searchChatBtnEl = document.getElementById(
+    "searchChatBtn",
+  ) as HTMLButtonElement;
+  headerRightEl = document.querySelector(".header-right") as HTMLElement;
+  userCardEl = (document.getElementById("userCard") || document.querySelector(".user-card")) as HTMLElement;
 
   // Init state
   loadSettings();

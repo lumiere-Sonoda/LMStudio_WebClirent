@@ -57,7 +57,7 @@
               <span id="connectionText" class="connection-text">未接続</span>
             </div>
             <button id="settingsToggleBtn" class="btn secondary small">
-              設定
+              ...
             </button>
           </div>
         </header>
@@ -65,75 +65,45 @@
         <!-- 設定パネル -->
         <section id="settingsPanel" class="settings-panel hidden">
           <div class="settings-row">
-            <label class="field">
-              <span class="field-label">API ベースURL</span>
-              <input
-                id="apiBaseUrlInput"
-                type="text"
-                class="input"
-                placeholder="http://localhost:1234/v1"
-              />
-            </label>
-            <label class="field">
-              <span class="field-label">モデルID</span>
-              <input
-                id="modelIdInput"
-                type="text"
-                class="input"
-                placeholder="mistralai/ministral-3-3b"
-              />
-            </label>
+          <!-- ★ 表示するのは URL だけ -->
+          <div class="field field-url full">
+            <div class="field-label">API ベース URL</div>
+            <input
+              id="apiBaseUrlInput"
+              class="input"
+              type="text"
+              placeholder="http://localhost:1234/v1"
+            />
           </div>
+        </div>
 
-          <div class="settings-row">
-            <label class="field small">
-              <span class="field-label">温度 (temperature)</span>
-              <input
-                id="temperatureInput"
-                type="number"
-                class="input"
-                min="0"
-                max="2"
-                step="0.1"
-                value="0.7"
-              />
-            </label>
-            <label class="field small">
-              <span class="field-label">最大トークン (max_tokens)</span>
-              <input
-                id="maxTokensInput"
-                type="number"
-                class="input"
-                min="0"
-                step="1"
-                placeholder="空欄 = モデル任せ"
-              />
-            </label>
-          </div>
+        <!-- システムメッセージ -->
+        <div class="field field-system full">
+          <div class="field-label">システムメッセージ</div>
+          <textarea
+            id="systemPromptInput"
+            class="textarea"
+            rows="4"
+            placeholder="あなたは日本語で丁寧に回答する AI アシスタントです。"
+          ></textarea>
+        </div>
 
-          <div class="settings-row">
-            <label class="field full">
-              <span class="field-label">システムメッセージ</span>
-              <textarea
-                id="systemPromptInput"
-                class="input textarea"
-                rows="2"
-              >あなたは日本語で丁寧に回答するアシスタントです。</textarea>
-            </label>
+        <div class="settings-footer">
+          <div id="settingsStatus" class="settings-status"></div>
+          <div class="btn-row">
+            <button id="testConnectionBtn" class="btn secondary">
+              接続テスト
+            </button>
+            <button id="saveSettingsBtn" class="btn primary">
+              保存
+            </button>
           </div>
+        </div>
 
-          <div class="settings-footer">
-            <div id="settingsStatus" class="settings-status"></div>
-            <div class="settings-actions">
-              <button id="saveSettingsBtn" class="btn secondary small">
-                保存
-              </button>
-              <button id="testConnectionBtn" class="btn subtle small">
-                接続テスト
-              </button>
-            </div>
-          </div>
-        </section>
+        <input id="modelIdInput" type="hidden" />
+        <input id="temperatureInput" type="hidden" />
+        <input id="maxTokensInput" type="hidden" />
+      </section>
 
         <!-- チャットメッセージ -->
         <section id="chatMessages" class="chat-messages"></section>
