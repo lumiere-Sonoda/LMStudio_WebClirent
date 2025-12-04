@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <title>LM Studio Web Chat</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <!-- 左サイドバー -->
+      <aside class="sidebar">
+        <div class="sidebar-top">
+          <div class="logo-row">
+            <div class="logo-dot"></div>
+            <div class="logo-text">
+              <div class="logo-title">LM Studio Web Chat</div>
+              <div class="logo-sub">Local LLM Client</div>
+            </div>
+          </div>
+
+          <button id="newChatBtn" class="btn primary full-width">
+            ＋ 新しいチャット
+          </button>
+
+          <button id = "searchChatBtn" class = "btn primary full-width">
+            チャットを検索
+          </button>
+
+          <div class="sidebar-section-title">チャット履歴</div>
+          <div id="chatList" class="chat-list"></div>
+        </div>
+
+        <div class="sidebar-bottom">
+          <div class="user-card">
+            <div class="user-avatar">D</div>
+            <div class="user-meta">
+              <div class="user-name">Ari.</div>
+              <div class="user-sub">Powered By LM Studio</div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- メインエリア -->
+      <main class="main">
+        <header class="main-header">
+          <div class="chat-title-block">
+            <!-- <div id="currentChatTitle" class="chat-title">
+              新しいチャット
+            </div> -->
+            <h3 id="modelLabel" class="chat-title">モデル: 未設定</h3>
+          </div>
+          <div class="header-right">
+            <div class="connection-indicator">
+              <span id="connectionDot" class="dot"></span>
+              <span id="connectionText" class="connection-text">未接続</span>
+            </div>
+            <button id="settingsToggleBtn" class="btn secondary small">
+              設定
+            </button>
+          </div>
+        </header>
+
+        <!-- 設定パネル -->
+        <section id="settingsPanel" class="settings-panel hidden">
+          <div class="settings-row">
+            <label class="field">
+              <span class="field-label">API ベースURL</span>
+              <input
+                id="apiBaseUrlInput"
+                type="text"
+                class="input"
+                placeholder="http://localhost:1234/v1"
+              />
+            </label>
+            <label class="field">
+              <span class="field-label">モデルID</span>
+              <input
+                id="modelIdInput"
+                type="text"
+                class="input"
+                placeholder="mistralai/ministral-3-3b"
+              />
+            </label>
+          </div>
+
+          <div class="settings-row">
+            <label class="field small">
+              <span class="field-label">温度 (temperature)</span>
+              <input
+                id="temperatureInput"
+                type="number"
+                class="input"
+                min="0"
+                max="2"
+                step="0.1"
+                value="0.7"
+              />
+            </label>
+            <label class="field small">
+              <span class="field-label">最大トークン (max_tokens)</span>
+              <input
+                id="maxTokensInput"
+                type="number"
+                class="input"
+                min="0"
+                step="1"
+                placeholder="空欄 = モデル任せ"
+              />
+            </label>
+          </div>
+
+          <div class="settings-row">
+            <label class="field full">
+              <span class="field-label">システムメッセージ</span>
+              <textarea
+                id="systemPromptInput"
+                class="input textarea"
+                rows="2"
+              >あなたは日本語で丁寧に回答するアシスタントです。</textarea>
+            </label>
+          </div>
+
+          <div class="settings-footer">
+            <div id="settingsStatus" class="settings-status"></div>
+            <div class="settings-actions">
+              <button id="saveSettingsBtn" class="btn secondary small">
+                保存
+              </button>
+              <button id="testConnectionBtn" class="btn subtle small">
+                接続テスト
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- チャットメッセージ -->
+        <section id="chatMessages" class="chat-messages"></section>
+
+        <!-- 入力エリア -->
+        <footer class="input-area">
+          <div class="input-inner">
+            <textarea
+              id="userInput"
+              class="input chat-input"
+              rows="1"
+              placeholder="質問してみましょう"
+            ></textarea>
+            <button id="sendBtn" class="btn primary">
+              ↑
+            </button>
+          </div>
+          <div class="input-hint">
+            Local AIはの回答は必ずしも正しいとは限りません。重要な情報は確認するようにしてください。cookie の設定を参照してください。
+          </div>
+        </footer>
+      </main>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
