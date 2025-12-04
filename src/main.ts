@@ -1,3 +1,5 @@
+import { renderMessageContentWithTables } from "./markdownTableRenderer";
+
 type Role = "user" | "assistant";
 
 interface Message {
@@ -320,7 +322,7 @@ function renderMessages(): void {
     meta.textContent = msg.role === "user" ? "You" : "Assistant";
 
     const content = document.createElement("div");
-    content.textContent = msg.content;
+    renderMessageContentWithTables(content, msg.content);
 
     bubble.appendChild(meta);
     bubble.appendChild(content);

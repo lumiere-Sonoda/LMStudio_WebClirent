@@ -641,3 +641,33 @@ body {
 .header-menu-dropdown button:hover {
   background-color: #f3f4f6;
 }
+
+/* Markdown table rendering */
+.markdown-table-wrapper {
+  margin-top: 8px;
+  margin-bottom: 8px;
+  overflow-x: auto;
+}
+
+.markdown-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.markdown-table th,
+.markdown-table td {
+  border: 1px solid #e5e7eb;
+  padding: 6px 8px;
+  vertical-align: top;
+}
+
+.markdown-table th {
+  background-color: #f9fafb;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.markdown-table tr:nth-child(even) td {
+  background-color: #fdfdfd;
+}
